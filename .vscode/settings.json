@@ -1,0 +1,6 @@
+{
+    "files.exclude": {
+        "**/bin": true
+    },
+    "C_Cpp.intelliSenseCacheSize": 0
+}
