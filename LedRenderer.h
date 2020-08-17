@@ -1,27 +1,42 @@
 #pragma once
+#include "Renderer.h"
 #include "LedControl.h"
 
-#define DISPLAY_COLUMNS 2
-#define DISPLAY_ROWS 2
-#define DISPLAY_WIDTH 8
-#define DISPLAY_HEIGHT 8
-
-class LedRenderer
+class LedRenderer : public Renderer
 {
 private:
-  LedControl *controller;
-  byte pixelRowBuffer[DISPLAY_COLUMNS * DISPLAY_ROWS * DISPLAY_HEIGHT];
+    LedControl *controller;
 
 public:
-  void setPixel(int x, int y, bool state);
-  void drawBuffer();
-  byte *getRowBufferSlice(int address);
-  LedControl *getController();
+    LedRenderer(LedControl *controller)
+    {
+        this->controller = controller;
+    }
 
-  static int getDisplayAddress(int displayX, int displayY);
+    LedControl *getController()
+    {
+        return controller;
+    }
 
-  LedRenderer(LedControl *controller)
-  {
-    this->controller = controller;
-  }
+    virtual void commit()
+    {
+        for (int dy = 0; dy < DISPLAY_ROWS; dy++)
+        {
+            for (int dx = 0; dx < DISPLAY_COLUMNS; dx++)
+            {
+                int displayAddress = Renderer::getDisplayColumnAddress(dx, dy);
+                byte *displayColumn = getDisplayColumn(displayAddress);
+
+                for (int row = 0; row < DISPLAY_HEIGHT; row++)
+                {
+                    byte value = displayColumn[row];
+
+                    // Reverse bits of value.
+                    //value = ((b * 0x0802LU & 0x22110LU) | (b * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
+
+                    controller->setRow(displayAddress, row, value);
+                }
+            }
+        }
+    }
 };

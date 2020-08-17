@@ -2,19 +2,24 @@
     "configurations": [
         {
             "name": "Win32",
-            "cppStandard": "c++20",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
             "defines": [
-                "USBCON"
+                "USBCON",
+                "ARDUINO=100"
             ],
             "includePath": [
                 "C:/Program Files (x86)/Arduino/hardware/arduino/avr/cores/arduino",
                 "C:/Program Files (x86)/Arduino/hardware/arduino/avr/variants/standard",
                 "C:/Program Files (x86)/Arduino/hardware/tools/avr/avr/include",
                 "C:/Program Files (x86)/Arduino/hardware/tools/avr/avr/include/sys",
-                "C:/Projects/Arduino/libraries/LedControl/src"
+                "C:/Program Files (x86)/Arduino/libraries/LedControl/src",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
+                "C:\\Program Files (x86)\\Arduino\\tools\\**"
             ],
             "forcedInclude": [
-                "C:/Program Files (x86)/Arduino/hardware/arduino/avr/cores/arduino/Arduino.h"
+                "C:/Program Files (x86)/Arduino/hardware/arduino/avr/cores/arduino/Arduino.h",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
             ],
             "intelliSenseMode": "msvc-x64"
         }
