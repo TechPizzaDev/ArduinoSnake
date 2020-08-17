@@ -18,18 +18,18 @@ public:
         return controller;
     }
 
-    virtual void commit()
+    void commit()
     {
-        for (int dy = 0; dy < DISPLAY_ROWS; dy++)
+        for (int dy = 0; dy < VERTICAL_DISPLAYS; dy++)
         {
-            for (int dx = 0; dx < DISPLAY_COLUMNS; dx++)
+            for (int dx = 0; dx < HORIZONTAL_DISPLAYS; dx++)
             {
-                int displayAddress = Renderer::getDisplayColumnAddress(dx, dy);
-                byte *displayColumn = getDisplayColumn(displayAddress);
+                int displayAddress = Renderer::getDisplayAddress(dx, dy);
+                byte *display = getDisplay(displayAddress);
 
                 for (int row = 0; row < DISPLAY_HEIGHT; row++)
                 {
-                    byte value = displayColumn[row];
+                    byte value = display[row];
 
                     // Reverse bits of value.
                     //value = ((b * 0x0802LU & 0x22110LU) | (b * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;

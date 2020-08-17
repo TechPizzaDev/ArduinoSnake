@@ -3,43 +3,235 @@
 
 <head>
     <style>
+        html,
         body {
             background-color: rgb(10, 20, 10);
+            margin: 0px;
+        }
+
+        #connectButton {
+            padding: 24px;
+            font-size: 20px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 24px;
+            display: block;
+            box-shadow: 0px 0px 5px yellow;
+        }
+
+        #mainCanvas {
+            width: auto;
+            height: 100vh;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            image-rendering: pixelated;
         }
     </style>
 </head>
 
 <body>
-    <button onclick="connect()">Connect</button>
-
-    <canvas id="mainCanvas"></canvas>
+    <div id="mainContainer">
+        <button id="connectButton" onclick="connect()">Choose device</button>
+        <canvas id="mainCanvas" style="display: none"></canvas>
+    </div>
 
     <script>
+        const SerialIncomingMessageType =
+        {
+            Setup: 0,
+            Print: 1,
+            DisplayData: 2
+        };
+
+        const SerialOutgoingMessageType =
+        {
+            SetupAcknowledge: 0,
+            MoveDirection: 1
+        };
+
         const canvas = document.getElementById("mainCanvas");
+        const ctx2D = canvas.getContext("2d");
 
-        var device;
+        function drawLine(x1, y1, x2, y2) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
 
-        function connect() {
-            navigator.usb.requestDevice({ filters: [{ vendorId: 0x2341 }] })
-                .then(selectedDevice => {
-                    device = selectedDevice;
-                    return device.open(); // Begin a session.
-                })
-                .then(() => device.selectConfiguration(1)) // Select configuration #1 for the device.
-                .then(() => device.claimInterface(2)) // Request exclusive control over interface #2.
-                .then(() => device.controlTransferOut({
-                    requestType: 'class',
-                    recipient: 'interface',
-                    request: 0x22,
-                    value: 0x01,
-                    index: 0x02
-                })) // Ready to receive data
-                .then(() => device.transferIn(5, 64)) // Waiting for 64 bytes of data from endpoint #5.
-                .then(result => {
-                    let decoder = new TextDecoder();
-                    console.log('Received: ' + decoder.decode(result.data));
-                })
-                .catch(error => { console.log(error); });
+        let port;
+        let displayParams;
+
+        async function onSetup(writer) {
+            displayParams.messageSize =
+                displayParams.horizontals *
+                displayParams.verticals *
+                displayParams.height;
+
+            document.getElementById("connectButton").style.display = "none";
+            canvas.width = displayParams.horizontals * displayParams.width;
+            canvas.height = displayParams.verticals * displayParams.height;
+            canvas.style.display = null;
+
+            await writer.write(
+                new Uint8Array([SerialOutgoingMessageType.SetupAcknowledge]));
+
+            document.addEventListener("keydown", async (e) => {
+                const up = new Uint8Array([SerialOutgoingMessageType.MoveDirection, 85]);
+                const down = new Uint8Array([SerialOutgoingMessageType.MoveDirection, 68]);
+                const left = new Uint8Array([SerialOutgoingMessageType.MoveDirection, 76]);
+                const right = new Uint8Array([SerialOutgoingMessageType.MoveDirection, 82]);
+
+                switch (e.keyCode) {
+                    case 87:
+                    case 38:
+                        await writer.write(up);
+                        break;
+
+                    case 65:
+                    case 37:
+                        await writer.write(left);
+                        break;
+
+                    case 83:
+                    case 40:
+                        await writer.write(down);
+                        break;
+
+                    case 68:
+                    case 39:
+                        await writer.write(right);
+                        break;
+                }
+            }, false);
+
+            console.log("Setup:", displayParams);
+        }
+
+        function onDisplayData(buffer) {
+            ctx2D.fillStyle = "black";
+            ctx2D.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx2D.fillStyle = "lime";
+            for (let dy = 0; dy < displayParams.verticals; dy++) {
+                for (let dx = 0; dx < displayParams.horizontals; dx++) {
+                    for (let y = 0; y < displayParams.height; y++) {
+
+                        const displayAddress = dx + dy * displayParams.horizontals;
+                        const row = buffer[y + displayAddress * displayParams.height];
+
+                        for (let x = 0; x < displayParams.width; x++) {
+                            const pixelValue = (row >> x) & 1;
+                            if (pixelValue > 0) {
+                                ctx2D.fillRect(
+                                    displayParams.width - 1 - x + dx * displayParams.width,
+                                    y + dy * displayParams.height,
+                                    1, 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        async function connect() {
+            port = await navigator.serial.requestPort();
+            await port.open({ baudrate: 38400 });
+
+            const writer = port.writable.getWriter();
+
+            let buffer = [];
+            let messageType = SerialIncomingMessageType.Setup;
+
+            function decodeString(start) {
+                let breakIndex = buffer.indexOf("\r".charCodeAt(0), 1);
+                if (breakIndex != -1) {
+                    const printData = buffer.slice(1, breakIndex);
+                    return String.fromCharCode(...printData);
+                }
+                return null;
+            }
+
+            const writableStream = new WritableStream({
+                async write(chunk) {
+                    buffer.push(...chunk);
+
+                    if (messageType == null) {
+                        messageType = buffer[0];
+                    }
+
+                    function finishMessage(length) {
+                        buffer.splice(0, length + 1);
+                        messageType = null;
+                    }
+
+                    switch (messageType) {
+                        case SerialIncomingMessageType.Setup:
+                            async function trySetup() {
+                                const sig = "Arduino";
+                                const sigLength = sig.length + 2;
+                                const setupLength = sigLength + 4;
+
+                                if (buffer.length > setupLength) {
+                                    const setupSig = decodeString(1);
+                                    if (setupSig == sig) {
+                                        displayParams = {
+                                            horizontals: buffer[sigLength + 1],
+                                            verticals: buffer[sigLength + 2],
+                                            width: buffer[sigLength + 3],
+                                            height: buffer[sigLength + 4],
+                                        };
+                                        await onSetup(writer);
+                                        finishMessage(setupLength);
+                                    }
+                                    else {
+                                        if (setupSig != null) {
+                                            // skip to sig if we find it in the buffer
+                                            const possibleIndex = setupSig.indexOf(sig);
+                                            if (possibleIndex > 0)
+                                                return possibleIndex;
+                                        }
+                                        return 1;
+                                    }
+                                }
+                                return 0;
+                            }
+
+                            let toSkip;
+                            while ((toSkip = await trySetup()) > 0) {
+                                buffer.splice(0, toSkip);
+                            }
+                            break;
+
+                        case SerialIncomingMessageType.Print:
+                            const print = decodeString(1);
+                            if (print != null) {
+                                console.log("Print:", print);
+                                finishMessage(print.length + 2); // include newline chars
+                            }
+                            break;
+
+                        case SerialIncomingMessageType.DisplayData:
+                            if (displayParams == null)
+                                break;
+
+                            if (buffer.length > displayParams.messageSize) {
+                                await onDisplayData(buffer.slice(1, displayParams.messageSize + 1));
+                                finishMessage(displayParams.messageSize);
+                            }
+                            break;
+                    }
+                },
+                close() {
+                    console.log("Sink closed");
+                },
+                abort(err) {
+                    console.log("Sink error:", err);
+                }
+            });
+
+            port.readable.pipeTo(writableStream);
         }
     </script>
 </body>

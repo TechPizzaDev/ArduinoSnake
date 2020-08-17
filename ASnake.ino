@@ -6,40 +6,48 @@
 #define LED_PIN_DATA 4
 #define LED_PIN_CLK 3
 #define LED_PIN_LOAD 2
-#define LED_CONTROLLERS 4
+#define LED_CONTROLLER_COUNT 4
 
 const int tickRate = 25;
 const float targetTime = (1.0 / tickRate);
 
+bool setupAcknowledged;
 unsigned long oldMilliTime;
 float accumulatedTime;
 
-LedControl ledController = LedControl(
-    LED_PIN_DATA, LED_PIN_CLK, LED_PIN_LOAD, LED_CONTROLLERS);
-
-LedRenderer ledRenderer = LedRenderer(&ledController);
-SerialRenderer serialRenderer = SerialRenderer();
+Game game = Game();
 
 Renderer *renderer;
-Game game = Game();
 
 void setup()
 {
-    Serial.begin(38400);
-
-    for (int i = 0; i < ledController.getDeviceCount(); i++)
+    setupAcknowledged = false;
+    if (setupAcknowledged)
     {
-        ledController.setIntensity(i, 7);
-        ledController.shutdown(i, false);
+        auto ledController = new LedControl(
+            LED_PIN_DATA, LED_PIN_CLK, LED_PIN_LOAD, LED_CONTROLLER_COUNT);
+
+        for (int i = 0; i < ledController->getDeviceCount(); i++)
+        {
+            ledController->setIntensity(i, 7);
+            ledController->shutdown(i, false);
+        }
+
+        renderer = new LedRenderer(ledController);
+    }
+    else
+    {
+        renderer = new SerialRenderer();
     }
 
-    renderer = &serialRenderer;
+    Serial.begin(38400);
 
-    Serial.write(SerialOutgoingMessageType::DisplayParameters);
-    Serial.write(DISPLAY_COLUMNS * DISPLAY_ROWS);
+    Serial.write(SerialOutgoingMessageType::Setup);
+    Serial.println("Arduino");
+    Serial.write(HORIZONTAL_DISPLAYS);
+    Serial.write(VERTICAL_DISPLAYS);
     Serial.write(DISPLAY_WIDTH);
     Serial.write(DISPLAY_HEIGHT);
-
     Serial.flush();
 }
 
@@ -52,11 +60,38 @@ void loop()
 
     if (accumulatedTime >= targetTime)
     {
-        game.tick(targetTime);
-        game.draw(renderer);
+        readSerialMessages();
 
-        renderer->commit();
+        if (setupAcknowledged)
+        {
+            game.tick(targetTime);
+            game.draw(renderer);
+
+            renderer->commit();
+        }
 
         accumulatedTime -= targetTime;
     }
+}
+
+void readSerialMessages()
+{
+TryRead:
+    int incomingType = Serial.read();
+    switch (incomingType)
+    {
+    case SerialIncomingMessageType::SetupAcknowledge:
+        setupAcknowledged = true;
+        break;
+
+    case SerialIncomingMessageType::MoveDirection:
+        byte direction[1];
+        if (Serial.readBytes(direction, 1) == 1)
+            game.setDirection(direction[0]);
+        break;
+
+    default:
+        return;
+    }
+    goto TryRead;
 }

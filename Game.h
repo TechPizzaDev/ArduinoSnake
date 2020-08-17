@@ -1,50 +1,45 @@
 #pragma once
 #include "Renderer.h"
+#include "SerialRenderer.h"
+#include "Structure.h"
 
 #define ARENA_WIDTH 16
 #define ARENA_HEIGHT 16
-
-enum SerialOutgoingMessageType : byte
-{
-    Message,
-    DisplayData,
-    DisplayParameters
-};
-
-enum SerialIncomingMessageType : byte
-{
-
-};
-
-enum TileType : byte
-{
-    Empty,
-    Snake,
-    Apple
-};
-
-struct Tile
-{
-    TileType type;
-    float duration;
-};
 
 class Game
 {
 public:
     Tile tiles[ARENA_WIDTH * ARENA_HEIGHT];
 
-    char dir;
     int snakeX, snakeY, speedX, speedY;
 
+    int score;
     bool appleShine;
-    int score = 5;
-
     float snakeMoveTime;
     float appleBlinkTime;
 
     Game()
     {
+        reset();
+    }
+
+    void reset()
+    {
+        memset(tiles, 0, sizeof(Tile) * ARENA_WIDTH * ARENA_HEIGHT);
+        appleShine = false;
+        snakeMoveTime = 0;
+        appleBlinkTime = 0;
+        snakeX = 0;
+        snakeY = 0;
+        speedX = 0;
+        speedY = 0;
+
+        score = 0;
+        snakeX = 0;
+        snakeY = 0;
+        speedX = 1;
+        speedY = 0;
+
         spawnApple();
     }
 
@@ -56,22 +51,22 @@ public:
     float getSnakeLength()
     {
         float rawLength = getRawSnakeLength();
-        return 1.0 / (rawLength * getSnakeMoveRate());
+        return 1.0f / (rawLength * getSnakeMoveRate());
     }
 
     float getSnakeMoveRate()
     {
-        return 1.0 / (score * 0.3 + 1);
+        return 1.0f / (score * 0.25f + 2);
     }
 
     float getAppleBlinkRate()
     {
-        return getSnakeMoveRate() / 4;
+        return getSnakeMoveRate() / 2.0f;
     }
 
     Tile *getTile(int x, int y)
     {
-        return tiles + y * ARENA_WIDTH + x;
+        return x + tiles + y * ARENA_WIDTH;
     }
 
     void moveSnake()
@@ -102,7 +97,7 @@ public:
         }
 
         if (tile->type == Snake)
-            tile->duration = 1.0 / getRawSnakeLength();
+            tile->duration = 1.0 / getSnakeLength();
     }
 
     void updateDirection()
@@ -122,9 +117,11 @@ public:
         //    dir = 'R';
         //    break;
         //}
+    }
 
-        dir = Serial.read();
-        switch (dir)
+    void setDirection(char direction)
+    {
+        switch (direction)
         {
         case 'U':
             speedX = 0;
@@ -170,7 +167,6 @@ public:
 
     void updateTiles(float deltaTime)
     {
-
         for (int y = 0; y < ARENA_HEIGHT; y++)
         {
             Tile *tileRow = tiles + y * ARENA_WIDTH;
@@ -199,7 +195,7 @@ public:
 
     void tick(float deltaTime)
     {
-        updateDirection();
+        //updateDirection();
 
         snakeMoveTime += deltaTime;
         if (snakeMoveTime >= getSnakeMoveRate())
@@ -226,9 +222,9 @@ public:
 
             for (int x = 0; x < ARENA_WIDTH; x++)
             {
-                Tile tile = tileRow[x];
+                Tile *tile = &tileRow[x];
 
-                switch (tile.type)
+                switch (tile->type)
                 {
                 case Snake:
                     renderer->setPixel(x, y, true);
@@ -249,6 +245,8 @@ public:
             }
         }
     }
+
+    int xd;
 
     void draw(Renderer *renderer)
     {
