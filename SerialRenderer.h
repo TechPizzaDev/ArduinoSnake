@@ -12,6 +12,6 @@ public:
     void commit()
     {
         Serial.write(SerialOutgoingMessageType::DisplayData);
-        Serial.write(pixelRowBuffer, HORIZONTAL_DISPLAYS * VERTICAL_DISPLAYS * DISPLAY_HEIGHT);
+        Serial.write(pixelRowBuffer, sizeof(pixelRowBuffer));
     }
 };

@@ -6,6 +6,11 @@
 #define ARENA_WIDTH 16
 #define ARENA_HEIGHT 16
 
+#define LEFT_BUTTON 11
+#define RIGHT_BUTTON 9
+#define UP_BUTTON 12
+#define DOWN_BUTTON 10
+
 class Game
 {
 public:
@@ -102,21 +107,34 @@ public:
 
     void updateDirection()
     {
-        //char key = keypad.getKey();
-        //switch (key) {
-        //  case '2': // up
-        //    dir = 'U';
-        //    break;
-        //  case '4': // left
-        //    dir = 'L';
-        //    break;
-        //  case '8': // down
-        //    dir = 'D';
-        //    break;
-        //  case '6': // right
-        //    dir = 'R';
-        //    break;
-        //}
+        bool up = digitalRead(UP_BUTTON) != 0;
+        bool down = digitalRead(DOWN_BUTTON) != 0;
+        bool left = digitalRead(LEFT_BUTTON) != 0;
+        bool right = digitalRead(RIGHT_BUTTON) != 0;
+
+        if (up)
+        {
+            setDirection('U');
+            return;
+        }
+
+        if (down)
+        {
+            setDirection('D');
+            return;
+        }
+
+        if (left)
+        {
+            setDirection('L');
+            return;
+        }
+
+        if (right)
+        {
+            setDirection('R');
+            return;
+        }
     }
 
     void setDirection(char direction)
@@ -195,7 +213,7 @@ public:
 
     void tick(float deltaTime)
     {
-        //updateDirection();
+        updateDirection();
 
         snakeMoveTime += deltaTime;
         if (snakeMoveTime >= getSnakeMoveRate())
@@ -212,6 +230,16 @@ public:
         }
 
         updateTiles(deltaTime);
+
+        //Serial.write(SerialOutgoingMessageType::Print);
+        //Serial.print(digitalRead(UP_BUTTON));
+        //Serial.print("-");
+        //Serial.print(digitalRead(DOWN_BUTTON));
+        //Serial.print("-");
+        //Serial.print(digitalRead(LEFT_BUTTON));
+        //Serial.print("-");
+        //Serial.print(digitalRead(RIGHT_BUTTON));
+        //Serial.println();
     }
 
     void drawTiles(Renderer *renderer)

@@ -17,12 +17,13 @@ float accumulatedTime;
 
 Game game = Game();
 
-Renderer *renderer;
+Renderer *renderer1;
+Renderer *renderer2;
 
 void setup()
 {
-    setupAcknowledged = false;
-    if (setupAcknowledged)
+    setupAcknowledged = true;
+    //if (setupAcknowledged)
     {
         auto ledController = new LedControl(
             LED_PIN_DATA, LED_PIN_CLK, LED_PIN_LOAD, LED_CONTROLLER_COUNT);
@@ -33,11 +34,11 @@ void setup()
             ledController->shutdown(i, false);
         }
 
-        renderer = new LedRenderer(ledController);
+        renderer1 = new LedRenderer(ledController);
     }
-    else
+    //else
     {
-        renderer = new SerialRenderer();
+        renderer2 = new SerialRenderer();
     }
 
     Serial.begin(38400);
@@ -65,9 +66,15 @@ void loop()
         if (setupAcknowledged)
         {
             game.tick(targetTime);
-            game.draw(renderer);
 
-            renderer->commit();
+            game.draw(renderer1);
+            renderer1->commit();
+
+            memcpy(
+                renderer2->pixelRowBuffer, renderer1->pixelRowBuffer,
+                sizeof(renderer2->pixelRowBuffer));
+
+            renderer2->commit();
         }
 
         accumulatedTime -= targetTime;

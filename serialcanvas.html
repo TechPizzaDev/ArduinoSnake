@@ -113,7 +113,7 @@
             ctx2D.fillStyle = "black";
             ctx2D.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx2D.fillStyle = "lime";
+            ctx2D.fillStyle = "aqua";
             for (let dy = 0; dy < displayParams.verticals; dy++) {
                 for (let dx = 0; dx < displayParams.horizontals; dx++) {
                     for (let y = 0; y < displayParams.height; y++) {
@@ -145,9 +145,9 @@
             let messageType = SerialIncomingMessageType.Setup;
 
             function decodeString(start) {
-                let breakIndex = buffer.indexOf("\r".charCodeAt(0), 1);
+                let breakIndex = buffer.indexOf("\n".charCodeAt(0), 1);
                 if (breakIndex != -1) {
-                    const printData = buffer.slice(1, breakIndex);
+                    const printData = buffer.slice(1, breakIndex - 1);
                     return String.fromCharCode(...printData);
                 }
                 return null;
