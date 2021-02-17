@@ -137,7 +137,7 @@
 
         async function connect() {
             port = await navigator.serial.requestPort();
-            await port.open({ baudrate: 38400 });
+            await port.open({ baudRate: 38400 });
 
             const writer = port.writable.getWriter();
 

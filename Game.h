@@ -93,20 +93,35 @@ public:
         if (tile->type == Empty)
         {
             tile->type = Snake;
+            setSnakeDuration(tile);
         }
         else if (tile->type == Apple)
         {
             score++;
             tile->type = Snake;
+            setSnakeDuration(tile);
             spawnApple();
         }
-
-        if (tile->type == Snake)
-            tile->duration = 1.0 / getSnakeLength();
+        else if (tile->type == Snake)
+        {
+            snakeCollision(snakeX, snakeY);
+        }
     }
 
-    void updateDirection()
+    void setSnakeDuration(Tile* tile) 
     {
+        tile->duration = 1.0 / getSnakeLength();
+    }
+
+    void snakeCollision(int snakeX, int snakeY)
+    {
+        reset();
+    }
+
+    void readDirectionInput()
+    {
+        return;
+
         bool up = digitalRead(UP_BUTTON) != 0;
         bool down = digitalRead(DOWN_BUTTON) != 0;
         bool left = digitalRead(LEFT_BUTTON) != 0;
@@ -115,25 +130,18 @@ public:
         if (up)
         {
             setDirection('U');
-            return;
         }
-
-        if (down)
+        else if (down)
         {
             setDirection('D');
-            return;
         }
-
-        if (left)
+        else if (left)
         {
             setDirection('L');
-            return;
         }
-
-        if (right)
+        else if (right)
         {
             setDirection('R');
-            return;
         }
     }
 
@@ -213,7 +221,7 @@ public:
 
     void tick(float deltaTime)
     {
-        updateDirection();
+        readDirectionInput();
 
         snakeMoveTime += deltaTime;
         if (snakeMoveTime >= getSnakeMoveRate())

@@ -93,8 +93,9 @@ TryRead:
 
     case SerialIncomingMessageType::MoveDirection:
         byte direction[1];
-        if (Serial.readBytes(direction, 1) == 1)
+        if (Serial.readBytes(direction, 1) == 1){
             game.setDirection(direction[0]);
+        }
         break;
 
     default:
